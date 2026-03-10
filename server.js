@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-//  SERVER — Kommo Clínica Dashboard
+//  SERVER — Kommo Clínica Dashboard v2
 // ═══════════════════════════════════════════════════════
 
 require('dotenv').config();
@@ -18,7 +18,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Auth Routes ─────────────────────────────────────
 
-// GET /auth/connect?subdomain=X — Redirect to Kommo OAuth
 app.get('/auth/connect', (req, res) => {
   const subdomain = req.query.subdomain;
   if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
@@ -30,7 +29,6 @@ app.get('/auth/connect', (req, res) => {
   res.redirect(url);
 });
 
-// GET /auth/callback — Handle OAuth callback
 app.get('/auth/callback', async (req, res) => {
   try {
     const { code, state: subdomain, referer } = req.query;
@@ -49,8 +47,9 @@ app.get('/auth/callback', async (req, res) => {
       expires_in:    data.expires_in,
     });
     res.send(`<html><body style="font-family:'Outfit',sans-serif;text-align:center;padding:60px;background:#0f1f21;color:#d4e8e8">
-      <h2 style="color:#7ec8c8">✅ Conta "${sub}" conectada com sucesso!</h2>
+      <h2 style="color:#7ec8c8">✅ Conta "${sub}" conectada!</h2>
       <p style="margin-top:20px"><a href="/" style="color:#5ddba8;text-decoration:none;font-weight:600">Ir para o Dashboard →</a></p>
+      <script>if(window.opener){window.opener.postMessage('kommo_connected','*');setTimeout(()=>window.close(),2000)}</script>
     </body></html>`);
   } catch (err) {
     console.error('OAuth callback error:', err.response?.data || err.message);
@@ -58,7 +57,6 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
-// POST /auth/token — Store long-lived token
 app.post('/auth/token', (req, res) => {
   const { subdomain, token, expires_at } = req.body;
   if (!subdomain || !token) return res.status(400).json({ error: 'subdomain e token obrigatórios' });
@@ -66,21 +64,25 @@ app.post('/auth/token', (req, res) => {
   res.json({ ok: true, subdomain });
 });
 
-// GET /auth/accounts — List connected accounts
 app.get('/auth/accounts', (req, res) => res.json(store.listAccounts()));
 
-// DELETE /auth/accounts/:subdomain — Remove account
 app.delete('/auth/accounts/:subdomain', (req, res) => {
   store.removeAccount(req.params.subdomain);
   res.json({ ok: true });
 });
 
-// ─── Health Check (Railway) ──────────────────────────
+// ─── Health ──────────────────────────────────────────
+
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
 // ─── API Routes ──────────────────────────────────────
 
-// GET /api/filters?subdomain=X — Pipelines, users, sources for filter dropdowns
+// Helper: parse comma-separated string to int array
+function parseIds(val) {
+  if (!val) return undefined;
+  return String(val).split(',').map(Number).filter(n => !isNaN(n) && n > 0);
+}
+
 app.get('/api/filters', async (req, res) => {
   try {
     const { subdomain } = req.query;
@@ -93,15 +95,22 @@ app.get('/api/filters', async (req, res) => {
   }
 });
 
-// GET /api/dashboard?subdomain=X&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD&...
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const { subdomain, date_from, date_to, pipeline_id, responsible_user_id, source_field_value } = req.query;
+    const {
+      subdomain, date_from, date_to, date_mode,
+      pipeline_ids, status_ids, user_ids,
+      source_field_value,
+    } = req.query;
     if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
+
     const data = await kommo.buildDashboardData(subdomain, {
-      date_from, date_to,
-      pipeline_id: pipeline_id || undefined,
-      responsible_user_id: responsible_user_id || undefined,
+      date_from:          date_from || undefined,
+      date_to:            date_to || undefined,
+      date_mode:          date_mode || 'created_at',
+      pipeline_ids:       parseIds(pipeline_ids),
+      status_ids:         parseIds(status_ids),
+      user_ids:           parseIds(user_ids),
       source_field_value: source_field_value || undefined,
     });
     res.json(data);
@@ -113,17 +122,14 @@ app.get('/api/dashboard', async (req, res) => {
 
 // ─── Start ───────────────────────────────────────────
 
-// Ensure data directory exists
 const fs = require('fs');
 const dataDir = path.dirname(process.env.DB_PATH || path.join(__dirname, 'data', 'tokens.db'));
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-// Initialize store
 store.getDb();
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n  🏥 Kommo Clínica Dashboard`);
-  console.log(`  ─────────────────────────`);
+  console.log(`\n  🏥 Kommo Clínica Dashboard v2`);
+  console.log(`  ─────────────────────────────`);
   console.log(`  🌐 http://0.0.0.0:${PORT}`);
   console.log(`  📂 DB: ${process.env.DB_PATH || './data/tokens.db'}\n`);
 });
