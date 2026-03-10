@@ -288,11 +288,54 @@
 
     <!-- TEAM -->
     <div class="tab-content" id="tab-team">
-      <div class="charts-row">
-        <div class="chart-box" style="max-height:600px;overflow-y:auto"><div class="chart-title">Ranking de Vendas</div><div id="salesRanking"></div></div>
-        <div class="chart-box"><div class="chart-title">Receita por Responsável</div><canvas id="chartUserRevenue"></canvas></div>
+      <!-- Sub-tabs for team -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm team-sub active" data-sub="ranking" onclick="showTeamSub('ranking')">Ranking</button>
+        <button class="btn btn-sm team-sub" data-sub="sla" onclick="showTeamSub('sla')">SLA / Tempo de Resposta</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm" onclick="openBusinessHoursModal()" title="Configurar horário de atendimento">⚙ Horário Comercial</button>
       </div>
-      <div class="charts-row-full"><div class="chart-box"><div class="chart-title">Conversão por Responsável</div><canvas id="chartUserConversion"></canvas></div></div>
+
+      <!-- Sub: Ranking -->
+      <div class="team-panel active" id="teamRanking">
+        <div class="charts-row">
+          <div class="chart-box" style="max-height:600px;overflow-y:auto"><div class="chart-title">Ranking de Vendas</div><div id="salesRanking"></div></div>
+          <div class="chart-box"><div class="chart-title">Receita por Responsável</div><canvas id="chartUserRevenue"></canvas></div>
+        </div>
+        <div class="charts-row-full"><div class="chart-box"><div class="chart-title">Conversão por Responsável</div><canvas id="chartUserConversion"></canvas></div></div>
+      </div>
+
+      <!-- Sub: SLA -->
+      <div class="team-panel" id="teamSLA" style="display:none">
+        <!-- SLA KPIs -->
+        <div class="cards-grid" id="slaKpis" style="margin-bottom:20px">
+          <div class="card"><div class="card-label">Clique para carregar</div><div class="card-value accent" style="font-size:16px">Dados de SLA requerem análise de eventos</div><div class="card-sub"><button class="btn btn-primary btn-sm" onclick="loadSLAData()" style="margin-top:8px">📨 Carregar Análise SLA</button></div></div>
+        </div>
+
+        <!-- SLA User Table -->
+        <div class="table-section" id="slaUserSection" style="display:none">
+          <div class="table-header"><h3>Tempo de Resposta por Responsável</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Responsável</th><th>Leads</th><th>Respostas</th><th>Tempo Médio</th><th>Mediana</th><th>Dentro SLA</th><th>Fora SLA</th><th>% SLA</th></tr></thead>
+            <tbody id="slaUserTable"></tbody>
+          </table></div>
+        </div>
+
+        <!-- Pending Leads -->
+        <div class="table-section" id="slaPendingSection" style="display:none">
+          <div class="table-header"><h3>⚠ Leads Aguardando Resposta</h3></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Lead</th><th>Responsável</th><th>Msg recebida em</th><th>Espera (útil)</th><th>Espera (total)</th><th>SLA</th><th></th></tr></thead>
+            <tbody id="slaPendingTable"></tbody>
+          </table></div>
+        </div>
+
+        <!-- SLA Chart -->
+        <div class="charts-row" id="slaChartsRow" style="display:none">
+          <div class="chart-box"><div class="chart-title">Tempo Médio de Resposta por Responsável</div><canvas id="chartSlaBar"></canvas></div>
+          <div class="chart-box"><div class="chart-title">% Dentro do SLA por Responsável</div><canvas id="chartSlaRate"></canvas></div>
+        </div>
+      </div>
     </div>
 
     <!-- LOSSES -->
@@ -333,6 +376,40 @@
     </div>
   </div>
 </div>
+
+<!-- BUSINESS HOURS MODAL -->
+<div class="modal-overlay" id="bhModal">
+  <div class="modal" style="width:440px">
+    <h2>⚙ Horário de Atendimento</h2>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">O cálculo de SLA considera apenas o tempo dentro do horário comercial configurado.</p>
+    <div class="form-group">
+      <label>Dias de Trabalho</label>
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="bhDays">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="0"> Dom</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="1" checked> Seg</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="2" checked> Ter</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="3" checked> Qua</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="4" checked> Qui</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="5" checked> Sex</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-bright);cursor:pointer"><input type="checkbox" value="6"> Sáb</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="form-group" style="flex:1"><label>Início</label><input type="time" id="bhStart" value="08:00"></div>
+      <div class="form-group" style="flex:1"><label>Fim</label><input type="time" id="bhEnd" value="18:00"></div>
+    </div>
+    <div class="form-group"><label>Meta SLA (minutos)</label><input type="number" id="bhSlaTarget" value="30" min="1" max="1440" style="width:120px"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeBhModal()">Cancelar</button><button class="btn btn-primary" onclick="saveBusinessHours()">Salvar</button></div>
+  </div>
+</div>
+
+<style>
+  /* Team sub-tabs */
+  .team-sub.active{background:var(--accent)!important;color:var(--bg)!important;border-color:var(--accent)!important}
+  .team-panel{display:none}.team-panel.active{display:block}
+  /* SLA badges */
+  .sla-ok{color:var(--green)}.sla-warn{color:var(--orange)}.sla-bad{color:var(--red)}
+</style>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -770,6 +847,176 @@ function renderDealsTable(deals){
 
 // ─── Utils ───────────────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+
+// ═══════════════════════════════════════════════════════
+//  TEAM SUB-TABS & SLA
+// ═══════════════════════════════════════════════════════
+
+function showTeamSub(sub){
+  document.querySelectorAll('.team-sub').forEach(b=>b.classList.toggle('active',b.dataset.sub===sub));
+  document.querySelectorAll('.team-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(sub==='ranking'?'teamRanking':'teamSLA').classList.add('active');
+}
+
+// ─── Business Hours Modal ────────────────────────────
+
+async function openBusinessHoursModal(){
+  if(!currentSubdomain) return alert('Selecione uma conta');
+  try{
+    const bh=await(await fetch(`/api/business-hours?subdomain=${encodeURIComponent(currentSubdomain)}`)).json();
+    const days=bh.work_days?bh.work_days.split(',').map(Number):[];
+    document.querySelectorAll('#bhDays input').forEach(cb=>{cb.checked=days.includes(Number(cb.value))});
+    document.getElementById('bhStart').value=bh.start_time||'08:00';
+    document.getElementById('bhEnd').value=bh.end_time||'18:00';
+    document.getElementById('bhSlaTarget').value=bh.sla_target_minutes||30;
+  }catch(e){console.error(e)}
+  document.getElementById('bhModal').classList.add('active');
+}
+
+function closeBhModal(){document.getElementById('bhModal').classList.remove('active')}
+
+async function saveBusinessHours(){
+  const days=[];
+  document.querySelectorAll('#bhDays input:checked').forEach(cb=>days.push(cb.value));
+  const body={
+    subdomain:currentSubdomain,
+    work_days:days.join(','),
+    start_time:document.getElementById('bhStart').value,
+    end_time:document.getElementById('bhEnd').value,
+    sla_target_minutes:Number(document.getElementById('bhSlaTarget').value)||30,
+  };
+  await fetch('/api/business-hours',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  closeBhModal();
+}
+
+// ─── SLA Data ────────────────────────────────────────
+let slaData = null;
+
+async function loadSLAData(){
+  if(!currentSubdomain) return;
+  showLoading(true,'Analisando eventos de mensagens...');
+  const dates=datePicker.selectedDates;
+  const params=new URLSearchParams({subdomain:currentSubdomain,date_mode:dateMode});
+  if(dates[0]) params.set('date_from',formatISO(dates[0]));
+  if(dates[1]) params.set('date_to',formatISO(dates[1]));
+  if(msState.msPipelines.length) params.set('pipeline_ids',msState.msPipelines.join(','));
+  if(msState.msUsers.length) params.set('user_ids',msState.msUsers.join(','));
+  try{
+    const res=await fetch(`/api/sla?${params}`);
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    slaData=data;
+    renderSLA(data);
+  }catch(e){alert('Erro SLA: '+e.message)}finally{showLoading(false)}
+}
+
+function fmtMinutes(m){
+  if(m<1) return '<1 min';
+  if(m<60) return Math.round(m)+' min';
+  const h=Math.floor(m/60);
+  const min=Math.round(m%60);
+  return min>0?`${h}h ${min}min`:`${h}h`;
+}
+
+function renderSLA(data){
+  const g=data.global;
+  const target=data.sla_target_minutes;
+
+  // KPI cards
+  document.getElementById('slaKpis').innerHTML=`
+    <div class="card"><div class="card-label">Tempo Médio Resposta</div><div class="card-value ${g.avg_response_minutes<=target?'green':g.avg_response_minutes<=target*2?'orange':'red'}">${fmtMinutes(g.avg_response_minutes)}</div><div class="card-sub">Meta: ${fmtMinutes(target)}</div></div>
+    <div class="card"><div class="card-label">Total Respostas</div><div class="card-value accent">${fmt(g.total_responses)}</div><div class="card-sub">Interações analisadas</div></div>
+    <div class="card"><div class="card-label">% Dentro do SLA</div><div class="card-value ${g.sla_rate>=80?'green':g.sla_rate>=60?'orange':'red'}">${g.sla_rate}%</div><div class="card-sub">Meta: ≤${fmtMinutes(target)}</div></div>
+    <div class="card"><div class="card-label">Aguardando Resposta</div><div class="card-value ${g.over_sla_count>0?'red':'green'}">${g.pending_count}</div><div class="card-sub">${g.over_sla_count} fora do SLA</div></div>
+    <div class="card"><div class="card-sub" style="margin-top:0"><button class="btn btn-sm" onclick="loadSLAData()" style="width:100%">🔄 Recarregar</button></div></div>
+  `;
+
+  // User table
+  const ut=document.getElementById('slaUserTable');
+  if(data.users.length>0){
+    document.getElementById('slaUserSection').style.display='';
+    ut.innerHTML=data.users.map(u=>{
+      const cls=u.sla_rate>=80?'sla-ok':u.sla_rate>=60?'sla-warn':'sla-bad';
+      return `<tr>
+        <td style="font-weight:600;color:var(--text-bright)">${u.name}</td>
+        <td>${u.leads_count}</td>
+        <td>${u.total_responses}</td>
+        <td style="font-weight:600;color:${u.avg_response_minutes<=target?'var(--green)':u.avg_response_minutes<=target*2?'var(--orange)':'var(--red)'}">${fmtMinutes(u.avg_response_minutes)}</td>
+        <td>${fmtMinutes(u.median_response_minutes)}</td>
+        <td><span class="badge badge-green">${u.within_sla}</span></td>
+        <td><span class="badge badge-red">${u.outside_sla}</span></td>
+        <td class="${cls}" style="font-weight:700">${u.sla_rate}%</td>
+      </tr>`;
+    }).join('');
+  }else{
+    document.getElementById('slaUserSection').style.display='none';
+  }
+
+  // Pending leads
+  const pt=document.getElementById('slaPendingTable');
+  if(data.pending_leads.length>0){
+    document.getElementById('slaPendingSection').style.display='';
+    pt.innerHTML=data.pending_leads.map(p=>{
+      const cls=p.over_sla?'sla-bad':'sla-ok';
+      return `<tr>
+        <td style="font-weight:500;color:var(--text-bright)">${p.lead_name}</td>
+        <td>${p.responsible_name}</td>
+        <td>${fmtDate(p.incoming_at)}</td>
+        <td class="${cls}" style="font-weight:600">${fmtMinutes(p.waiting_minutes)}</td>
+        <td style="color:var(--text-muted)">${fmtMinutes(p.waiting_total_minutes)}</td>
+        <td>${p.over_sla?'<span class="badge badge-red">Fora</span>':'<span class="badge badge-green">OK</span>'}</td>
+        <td><a href="https://${currentSubdomain}.kommo.com/leads/detail/${p.lead_id}" target="_blank" style="font-size:12px">Abrir ↗</a></td>
+      </tr>`;
+    }).join('');
+  }else{
+    document.getElementById('slaPendingSection').style.display='none';
+  }
+
+  // Charts
+  if(data.users.length>0){
+    document.getElementById('slaChartsRow').style.display='';
+    renderSlaBarChart(data.users, target);
+    renderSlaRateChart(data.users);
+  }else{
+    document.getElementById('slaChartsRow').style.display='none';
+  }
+}
+
+function renderSlaBarChart(users, target){
+  destroyChart('chartSlaBar');
+  const top=users.slice(0,12);
+  charts.chartSlaBar=new Chart(document.getElementById('chartSlaBar'),{
+    type:'bar',data:{
+      labels:top.map(u=>u.name.split(' ')[0]),
+      datasets:[
+        {label:'Tempo Médio',data:top.map(u=>u.avg_response_minutes),backgroundColor:top.map(u=>u.avg_response_minutes<=target?'#5ddba8':u.avg_response_minutes<=target*2?'#f0b86e':'#e8706a'),borderRadius:6,borderSkipped:false},
+      ]
+    },options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>fmtMinutes(ctx.raw)}},
+        annotation:undefined
+      },
+      scales:{y:{ticks:{callback:v=>fmtMinutes(v)},grid:{color:'#1a3535'}},x:{grid:{display:false}}}
+    }
+  });
+}
+
+function renderSlaRateChart(users){
+  destroyChart('chartSlaRate');
+  const top=users.filter(u=>u.total_responses>0).slice(0,12);
+  charts.chartSlaRate=new Chart(document.getElementById('chartSlaRate'),{
+    type:'bar',data:{
+      labels:top.map(u=>u.name.split(' ')[0]),
+      datasets:[{label:'% SLA',data:top.map(u=>u.sla_rate),backgroundColor:top.map(u=>u.sla_rate>=80?'#5ddba8':u.sla_rate>=60?'#f0b86e':'#e8706a'),borderRadius:6,borderSkipped:false}]
+    },options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw+'%'}}},
+      scales:{y:{max:100,ticks:{callback:v=>v+'%'},grid:{color:'#1a3535'}},x:{grid:{display:false}}}
+    }
+  });
+}
 </script>
 </body>
 </html>

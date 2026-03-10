@@ -120,6 +120,48 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
+// GET/POST /api/business-hours?subdomain=X
+app.get('/api/business-hours', (req, res) => {
+  const { subdomain } = req.query;
+  if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
+  res.json(store.getBusinessHours(subdomain));
+});
+
+app.post('/api/business-hours', (req, res) => {
+  const { subdomain, work_days, start_time, end_time, sla_target_minutes } = req.body;
+  if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
+  store.upsertBusinessHours(subdomain, {
+    work_days: work_days || '1,2,3,4,5',
+    start_time: start_time || '08:00',
+    end_time: end_time || '18:00',
+    sla_target_minutes: sla_target_minutes || 30,
+  });
+  res.json({ ok: true });
+});
+
+// GET /api/sla?subdomain=X&date_from=&date_to=&pipeline_ids=&user_ids=
+app.get('/api/sla', async (req, res) => {
+  try {
+    const { subdomain, date_from, date_to, date_mode, pipeline_ids, user_ids } = req.query;
+    if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
+
+    const bh = store.getBusinessHours(subdomain);
+
+    const data = await kommo.buildSLAData(subdomain, {
+      date_from:       date_from || undefined,
+      date_to:         date_to || undefined,
+      date_mode:       date_mode || 'created_at',
+      pipeline_ids:    parseIds(pipeline_ids),
+      user_ids:        parseIds(user_ids),
+      business_hours:  bh,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('SLA error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Start ───────────────────────────────────────────
 
 const fs = require('fs');
