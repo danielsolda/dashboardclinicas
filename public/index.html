@@ -224,7 +224,7 @@
 
   <!-- Source (if available) -->
   <div class="filter-group" id="sourceFilterGroup" style="display:none">
-    <label>Origem</label>
+    <label id="sourceFilterLabel">Origem</label>
     <select id="filterSource"><option value="">Todas</option></select>
   </div>
 
@@ -355,6 +355,22 @@ Chart.defaults.font.family = "'Outfit', sans-serif";
 function fmt(n)      { return new Intl.NumberFormat('pt-BR').format(n); }
 function fmtMoney(n) { return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(n); }
 function fmtDate(ts) { if(!ts) return '—'; return new Date(ts*1000).toLocaleDateString('pt-BR'); }
+
+// Robust color handler for Kommo status colors
+function statusColor(raw, idx) {
+  if (!raw || raw === '0' || raw.length < 3) return palette[idx % palette.length];
+  let hex = raw.replace(/^#/, '');
+  // If it's a 6-char hex, check if it's too dark for our dark background
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    const r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
+    const brightness = (r*299 + g*587 + b*114) / 1000;
+    // Too dark (< 40) → use palette instead
+    if (brightness < 40) return palette[idx % palette.length];
+    return '#' + hex;
+  }
+  if (/^[0-9a-fA-F]{3}$/.test(hex)) return '#' + hex;
+  return palette[idx % palette.length];
+}
 
 // ─── Loading ─────────────────────────────────────────
 function showLoading(show,text){const el=document.getElementById('loadingOverlay');el.classList.toggle('active',show);if(text)el.querySelector('.loading-text').textContent=text}
@@ -553,6 +569,7 @@ async function onAccountChange(subdomain){
     const sSel=document.getElementById('filterSource');
     if(filtersData.sources.length>0){
       document.getElementById('sourceFilterGroup').style.display='';
+      document.getElementById('sourceFilterLabel').textContent=filtersData.source_field_name||'Origem';
       sSel.innerHTML='<option value="">Todas</option>';
       filtersData.sources.forEach(s=>{sSel.innerHTML+=`<option value="${s.label}">${s.label}</option>`});
     }else{document.getElementById('sourceFilterGroup').style.display='none'}
@@ -653,11 +670,11 @@ function renderFunnel(funnel){
   if(!funnel.length){el.innerHTML='<p style="color:var(--text-muted)">Sem dados</p>';return}
   const max=Math.max(...funnel.map(f=>f.count),1);
   let lastPipeline='';
-  el.innerHTML=funnel.map(f=>{
+  el.innerHTML=funnel.map((f,i)=>{
     let header='';
     if(f.pipeline && f.pipeline!==lastPipeline){lastPipeline=f.pipeline;header=`<div class="funnel-pipeline-title">${f.pipeline}</div>`}
     const pct=(f.count/max)*100;
-    const color=f.color?`#${f.color}`:palette[0];
+    const color=statusColor(f.color, i);
     return `${header}<div class="funnel-bar"><div class="funnel-label"><span class="funnel-label-name"><span class="dot" style="background:${color}"></span>${f.name}</span><span class="funnel-label-count">${fmt(f.count)} leads · ${fmtMoney(f.value)}</span></div><div class="funnel-track"><div class="funnel-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
   }).join('');
 }
@@ -666,7 +683,7 @@ function renderFunnelPie(funnel){
   destroyChart('chartFunnelPie');
   if(!funnel.length) return;
   charts.chartFunnelPie=new Chart(document.getElementById('chartFunnelPie'),{
-    type:'doughnut',data:{labels:funnel.map(f=>f.name),datasets:[{data:funnel.map(f=>f.count),backgroundColor:funnel.map((f,i)=>f.color?`#${f.color}`:palette[i%palette.length]),borderWidth:0}]},
+    type:'doughnut',data:{labels:funnel.map(f=>f.name),datasets:[{data:funnel.map(f=>f.count),backgroundColor:funnel.map((f,i)=>statusColor(f.color,i)),borderWidth:0}]},
     options:{responsive:true,cutout:'55%',plugins:{legend:{position:'right',labels:{boxWidth:10,padding:10,font:{size:11}}}}}
   });
 }
