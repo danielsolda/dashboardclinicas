@@ -316,7 +316,7 @@
         <div class="table-section" id="slaUserSection" style="display:none">
           <div class="table-header"><h3>Tempo de Resposta por Responsável</h3></div>
           <div class="table-wrap"><table>
-            <thead><tr><th>Responsável</th><th>Leads</th><th>Respostas</th><th>Tempo Médio</th><th>Mediana</th><th>Dentro SLA</th><th>Fora SLA</th><th>% SLA</th></tr></thead>
+            <thead><tr><th>Responsável</th><th>Leads</th><th>Msgs Pareadas</th><th>Tempo Médio</th><th>Mediana</th><th>P90</th><th>Dentro SLA</th><th>Fora SLA</th><th>% SLA</th></tr></thead>
             <tbody id="slaUserTable"></tbody>
           </table></div>
         </div>
@@ -398,7 +398,7 @@
       <div class="form-group" style="flex:1"><label>Início</label><input type="time" id="bhStart" value="08:00"></div>
       <div class="form-group" style="flex:1"><label>Fim</label><input type="time" id="bhEnd" value="18:00"></div>
     </div>
-    <div class="form-group"><label>Meta SLA (minutos)</label><input type="number" id="bhSlaTarget" value="30" min="1" max="1440" style="width:120px"></div>
+    <div class="form-group"><label>Meta SLA (minutos)</label><input type="number" id="bhSlaTarget" value="10" min="1" max="1440" style="width:120px"></div>
     <div class="modal-actions"><button class="btn" onclick="closeBhModal()">Cancelar</button><button class="btn btn-primary" onclick="saveBusinessHours()">Salvar</button></div>
   </div>
 </div>
@@ -668,6 +668,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // ═══ LOAD DASHBOARD ══════════════════════════════════
 async function loadDashboard(){
   if(!currentSubdomain) return;
+  slaData=null; // Invalidate SLA cache when filters change
   showLoading(true,'Buscando dados da Kommo...');
   const dates=datePicker.selectedDates;
   const params=new URLSearchParams({subdomain:currentSubdomain,date_mode:dateMode});
@@ -856,6 +857,8 @@ function showTeamSub(sub){
   document.querySelectorAll('.team-sub').forEach(b=>b.classList.toggle('active',b.dataset.sub===sub));
   document.querySelectorAll('.team-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(sub==='ranking'?'teamRanking':'teamSLA').classList.add('active');
+  // Auto-load SLA data when switching to SLA tab
+  if(sub==='sla' && !slaData && currentSubdomain) loadSLAData();
 }
 
 // ─── Business Hours Modal ────────────────────────────
@@ -868,7 +871,7 @@ async function openBusinessHoursModal(){
     document.querySelectorAll('#bhDays input').forEach(cb=>{cb.checked=days.includes(Number(cb.value))});
     document.getElementById('bhStart').value=bh.start_time||'08:00';
     document.getElementById('bhEnd').value=bh.end_time||'18:00';
-    document.getElementById('bhSlaTarget').value=bh.sla_target_minutes||30;
+    document.getElementById('bhSlaTarget').value=bh.sla_target_minutes||10;
   }catch(e){console.error(e)}
   document.getElementById('bhModal').classList.add('active');
 }
@@ -883,7 +886,7 @@ async function saveBusinessHours(){
     work_days:days.join(','),
     start_time:document.getElementById('bhStart').value,
     end_time:document.getElementById('bhEnd').value,
-    sla_target_minutes:Number(document.getElementById('bhSlaTarget').value)||30,
+    sla_target_minutes:Number(document.getElementById('bhSlaTarget').value)||10,
   };
   await fetch('/api/business-hours',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   closeBhModal();
@@ -924,11 +927,12 @@ function renderSLA(data){
 
   // KPI cards
   document.getElementById('slaKpis').innerHTML=`
-    <div class="card"><div class="card-label">Tempo Médio Resposta</div><div class="card-value ${g.avg_response_minutes<=target?'green':g.avg_response_minutes<=target*2?'orange':'red'}">${fmtMinutes(g.avg_response_minutes)}</div><div class="card-sub">Meta: ${fmtMinutes(target)}</div></div>
-    <div class="card"><div class="card-label">Total Respostas</div><div class="card-value accent">${fmt(g.total_responses)}</div><div class="card-sub">Interações analisadas</div></div>
-    <div class="card"><div class="card-label">% Dentro do SLA</div><div class="card-value ${g.sla_rate>=80?'green':g.sla_rate>=60?'orange':'red'}">${g.sla_rate}%</div><div class="card-sub">Meta: ≤${fmtMinutes(target)}</div></div>
+    <div class="card"><div class="card-label">Tempo Médio Resposta</div><div class="card-value ${g.avg_response_minutes<=target?'green':g.avg_response_minutes<=target*2?'orange':'red'}">${fmtMinutes(g.avg_response_minutes)}</div><div class="card-sub">Meta: ≤${fmtMinutes(target)}</div></div>
+    <div class="card"><div class="card-label">Msgs Pareadas</div><div class="card-value accent">${fmt(g.total_messages)}</div><div class="card-sub">incoming → outgoing</div></div>
+    <div class="card"><div class="card-label">% Dentro do SLA</div><div class="card-value ${g.sla_rate>=80?'green':g.sla_rate>=60?'orange':'red'}">${g.sla_rate}%</div><div class="card-sub">≤${fmtMinutes(target)} = OK</div></div>
+    <div class="card"><div class="card-label">P90</div><div class="card-value ${g.p90_minutes<=target?'green':g.p90_minutes<=target*3?'orange':'red'}">${fmtMinutes(g.p90_minutes)}</div><div class="card-sub">90% respondem em até</div></div>
     <div class="card"><div class="card-label">Aguardando Resposta</div><div class="card-value ${g.over_sla_count>0?'red':'green'}">${g.pending_count}</div><div class="card-sub">${g.over_sla_count} fora do SLA</div></div>
-    <div class="card"><div class="card-sub" style="margin-top:0"><button class="btn btn-sm" onclick="loadSLAData()" style="width:100%">🔄 Recarregar</button></div></div>
+    <div class="card"><div class="card-sub" style="margin-top:0"><button class="btn btn-sm" onclick="slaData=null;loadSLAData()" style="width:100%">🔄 Recarregar</button></div></div>
   `;
 
   // User table
@@ -940,9 +944,10 @@ function renderSLA(data){
       return `<tr>
         <td style="font-weight:600;color:var(--text-bright)">${u.name}</td>
         <td>${u.leads_count}</td>
-        <td>${u.total_responses}</td>
+        <td>${u.total_messages}</td>
         <td style="font-weight:600;color:${u.avg_response_minutes<=target?'var(--green)':u.avg_response_minutes<=target*2?'var(--orange)':'var(--red)'}">${fmtMinutes(u.avg_response_minutes)}</td>
         <td>${fmtMinutes(u.median_response_minutes)}</td>
+        <td style="color:${u.p90_response_minutes<=target*2?'var(--text-bright)':'var(--orange)'}">${fmtMinutes(u.p90_response_minutes)}</td>
         <td><span class="badge badge-green">${u.within_sla}</span></td>
         <td><span class="badge badge-red">${u.outside_sla}</span></td>
         <td class="${cls}" style="font-weight:700">${u.sla_rate}%</td>
@@ -993,11 +998,7 @@ function renderSlaBarChart(users, target){
       ]
     },options:{
       responsive:true,
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>fmtMinutes(ctx.raw)}},
-        annotation:undefined
-      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtMinutes(ctx.raw)}}},
       scales:{y:{ticks:{callback:v=>fmtMinutes(v)},grid:{color:'#1a3535'}},x:{grid:{display:false}}}
     }
   });
@@ -1005,7 +1006,7 @@ function renderSlaBarChart(users, target){
 
 function renderSlaRateChart(users){
   destroyChart('chartSlaRate');
-  const top=users.filter(u=>u.total_responses>0).slice(0,12);
+  const top=users.filter(u=>u.total_messages>0).slice(0,12);
   charts.chartSlaRate=new Chart(document.getElementById('chartSlaRate'),{
     type:'bar',data:{
       labels:top.map(u=>u.name.split(' ')[0]),
