@@ -286,55 +286,45 @@
       </div>
     </div>
 
-    <!-- TEAM -->
+    <!-- TEAM / SLA -->
     <div class="tab-content" id="tab-team">
-      <!-- Sub-tabs for team -->
       <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm team-sub active" data-sub="ranking" onclick="showTeamSub('ranking')">Ranking</button>
-        <button class="btn btn-sm team-sub" data-sub="sla" onclick="showTeamSub('sla')">SLA / Tempo de Resposta</button>
+        <h3 style="font-size:15px;color:var(--accent);font-weight:600;margin:0">Tempo de Resposta & SLA</h3>
         <div style="flex:1"></div>
-        <button class="btn btn-sm" onclick="openBusinessHoursModal()" title="Configurar horário de atendimento">⚙ Horário Comercial</button>
+        <button class="btn btn-sm" onclick="slaData=null;loadSLAData()">🔄 Recarregar</button>
+        <button class="btn btn-sm" onclick="openBusinessHoursModal()">⚙ Horário Comercial</button>
       </div>
 
-      <!-- Sub: Ranking -->
-      <div class="team-panel active" id="teamRanking">
-        <div class="charts-row">
-          <div class="chart-box" style="max-height:600px;overflow-y:auto"><div class="chart-title">Ranking de Vendas</div><div id="salesRanking"></div></div>
-          <div class="chart-box"><div class="chart-title">Receita por Responsável</div><canvas id="chartUserRevenue"></canvas></div>
-        </div>
-        <div class="charts-row-full"><div class="chart-box"><div class="chart-title">Conversão por Responsável</div><canvas id="chartUserConversion"></canvas></div></div>
+      <!-- SLA Global KPIs -->
+      <div class="cards-grid" id="slaKpis" style="margin-bottom:24px">
+        <div class="card"><div class="card-label">Carregando...</div><div class="card-value accent" style="font-size:15px">Os dados serão carregados automaticamente</div></div>
       </div>
 
-      <!-- Sub: SLA -->
-      <div class="team-panel" id="teamSLA">
-        <!-- SLA KPIs -->
-        <div class="cards-grid" id="slaKpis" style="margin-bottom:20px">
-          <div class="card"><div class="card-label">Clique para carregar</div><div class="card-value accent" style="font-size:16px">Dados de SLA requerem análise de eventos</div><div class="card-sub"><button class="btn btn-primary btn-sm" onclick="loadSLAData()" style="margin-top:8px">📨 Carregar Análise SLA</button></div></div>
-        </div>
+      <!-- Per-user cards -->
+      <div id="slaUserCards" style="margin-bottom:24px"></div>
 
-        <!-- SLA User Table -->
-        <div class="table-section" id="slaUserSection" style="display:none">
-          <div class="table-header"><h3>Tempo de Resposta por Responsável</h3></div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>Responsável</th><th>Leads</th><th>Msgs Pareadas</th><th>Tempo Médio</th><th>Mediana</th><th>P90</th><th>Dentro SLA</th><th>Fora SLA</th><th>% SLA</th></tr></thead>
-            <tbody id="slaUserTable"></tbody>
-          </table></div>
-        </div>
+      <!-- Charts -->
+      <div class="charts-row" id="slaChartsRow" style="display:none">
+        <div class="chart-box"><div class="chart-title">Tempo Médio de Resposta por Responsável (min)</div><canvas id="chartSlaBar"></canvas></div>
+        <div class="chart-box"><div class="chart-title">% Dentro do SLA por Responsável</div><canvas id="chartSlaRate"></canvas></div>
+      </div>
 
-        <!-- Pending Leads -->
-        <div class="table-section" id="slaPendingSection" style="display:none">
-          <div class="table-header"><h3>⚠ Leads Aguardando Resposta</h3></div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>Lead</th><th>Responsável</th><th>Msg recebida em</th><th>Espera (útil)</th><th>Espera (total)</th><th>SLA</th><th></th></tr></thead>
-            <tbody id="slaPendingTable"></tbody>
-          </table></div>
-        </div>
+      <!-- Pending Leads (all) -->
+      <div class="table-section" id="slaPendingSection" style="display:none;margin-bottom:20px">
+        <div class="table-header"><h3>⏳ Leads Aguardando Resposta</h3><span id="slaPendingCount" style="font-size:12px;color:var(--text-muted)"></span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Lead</th><th>Responsável</th><th>Msg recebida</th><th>Espera (útil)</th><th>Espera (total)</th><th>SLA</th><th></th></tr></thead>
+          <tbody id="slaPendingTable"></tbody>
+        </table></div>
+      </div>
 
-        <!-- SLA Chart -->
-        <div class="charts-row" id="slaChartsRow" style="display:none">
-          <div class="chart-box"><div class="chart-title">Tempo Médio de Resposta por Responsável</div><canvas id="chartSlaBar"></canvas></div>
-          <div class="chart-box"><div class="chart-title">% Dentro do SLA por Responsável</div><canvas id="chartSlaRate"></canvas></div>
-        </div>
+      <!-- Critical Leads (72h+) -->
+      <div class="table-section" id="slaCriticalSection" style="display:none">
+        <div class="table-header" style="border-left:3px solid var(--red)"><h3 style="color:var(--red)">🚨 Leads Críticos — Sem resposta há +72h</h3><span id="slaCriticalCount" style="font-size:12px;color:var(--red)"></span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Lead</th><th>Responsável</th><th>Msg recebida</th><th>Espera (útil)</th><th>Espera (total)</th><th></th></tr></thead>
+          <tbody id="slaCriticalTable"></tbody>
+        </table></div>
       </div>
     </div>
 
@@ -404,10 +394,25 @@
 </div>
 
 <style>
-  /* Team sub-tabs */
-  .team-sub.active{background:var(--accent)!important;color:var(--bg)!important;border-color:var(--accent)!important}
-  .team-panel{display:none}.team-panel.active{display:block}
-  /* SLA badges */
+  /* User SLA cards */
+  .sla-users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .sla-user-card{background:linear-gradient(145deg,var(--surface),var(--surface-2));border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:all .3s}
+  .sla-user-card:hover{border-color:var(--accent-border);transform:translateY(-2px);box-shadow:0 6px 24px rgba(126,200,200,.06)}
+  .sla-user-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .sla-user-name{font-size:15px;font-weight:700;color:var(--text-bright)}
+  .sla-user-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+  .sla-user-badge.good{background:rgba(93,219,168,.15);color:var(--green)}
+  .sla-user-badge.warn{background:rgba(240,184,110,.15);color:var(--orange)}
+  .sla-user-badge.bad{background:rgba(232,112,106,.15);color:var(--red)}
+  .sla-user-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .sla-stat{text-align:center}
+  .sla-stat-value{font-size:18px;font-weight:700;line-height:1.2}
+  .sla-stat-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);margin-top:2px}
+  .sla-user-bar{margin-top:12px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+  .sla-user-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+  .sla-user-pending{margin-top:10px;font-size:11px;color:var(--text-muted);display:flex;gap:12px}
+  .sla-user-pending .critical{color:var(--red);font-weight:600}
+
   .sla-ok{color:var(--green)}.sla-warn{color:var(--orange)}.sla-bad{color:var(--red)}
 </style>
 
@@ -453,7 +458,10 @@ function statusColor(raw, idx) {
 function showLoading(show,text){const el=document.getElementById('loadingOverlay');el.classList.toggle('active',show);if(text)el.querySelector('.loading-text').textContent=text}
 
 // ─── Tabs ────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active')})});
+document.querySelectorAll('.tab-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  // Auto-load SLA when Equipe tab is opened
+  if(btn.dataset.tab==='team' && !slaData && currentSubdomain) loadSLAData();
+})});
 
 // ─── Date Mode Toggle ────────────────────────────────
 function setDateMode(mode){
@@ -700,9 +708,6 @@ function renderDashboard(d){
   renderFunnelPie(d.funnel);
   renderSourceCharts(d.source_breakdown);
   renderSourceTable(d.source_breakdown);
-  renderUserRanking(d.user_ranking);
-  renderUserRevenue(d.user_ranking);
-  renderUserConversion(d.user_ranking);
   renderLossReasons(d.loss_reasons);
   renderLossPie(d.loss_reasons);
   renderDealsTable(d.won_leads);
@@ -788,36 +793,6 @@ function renderSourceTable(sources){
 }
 
 // ─── Team ────────────────────────────────────────────
-function renderUserRanking(r){
-  const el=document.getElementById('salesRanking');
-  if(!r.length){el.innerHTML='<p style="color:var(--text-muted);padding:20px">Sem dados</p>';return}
-  el.innerHTML=r.map((u,i)=>{
-    const pc=i===0?'gold':i===1?'silver':i===2?'bronze':'normal';
-    return`<div class="ranking-item"><div class="ranking-pos ${pc}">${i+1}</div><div class="ranking-info"><div class="ranking-name">${u.name}</div><div class="ranking-stats">${u.won} ganhos · ${u.count} total · ${u.count>0?Math.round((u.won/u.count)*100):0}% conv.</div></div><div class="ranking-value">${fmtMoney(u.revenue)}</div></div>`;
-  }).join('');
-}
-
-function renderUserRevenue(r){
-  destroyChart('chartUserRevenue');if(!r.length) return;
-  const top=r.slice(0,8);
-  charts.chartUserRevenue=new Chart(document.getElementById('chartUserRevenue'),{
-    type:'bar',data:{labels:top.map(u=>u.name.split(' ')[0]),datasets:[{label:'Receita',data:top.map(u=>u.revenue),backgroundColor:palette.slice(0,top.length),borderRadius:6,borderSkipped:false}]},
-    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtMoney(ctx.raw)}}},scales:{y:{ticks:{callback:v=>fmtMoney(v)},grid:{color:'#1a3535'}},x:{grid:{display:false}}}}
-  });
-}
-
-function renderUserConversion(r){
-  destroyChart('chartUserConversion');if(!r.length) return;
-  const top=r.filter(u=>u.count>0).slice(0,10);
-  charts.chartUserConversion=new Chart(document.getElementById('chartUserConversion'),{
-    type:'bar',data:{labels:top.map(u=>u.name),datasets:[
-      {label:'Ganhos',data:top.map(u=>u.won),backgroundColor:'#5ddba8',borderRadius:4},
-      {label:'Perdidos',data:top.map(u=>u.lost),backgroundColor:'#e8706a',borderRadius:4},
-      {label:'Em andamento',data:top.map(u=>u.active),backgroundColor:'#7ec8c8',borderRadius:4}
-    ]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:16}}},scales:{y:{stacked:true,grid:{color:'#1a3535'}},x:{stacked:true,grid:{display:false}}}}
-  });
-}
-
 // ─── Loss Reasons ────────────────────────────────────
 function renderLossReasons(reasons){
   destroyChart('chartLossReasons');
@@ -846,20 +821,11 @@ function renderDealsTable(deals){
   el.innerHTML=deals.map(d=>`<tr><td style="font-weight:500;color:var(--text-bright);max-width:200px;overflow:hidden;text-overflow:ellipsis">${d.name}</td><td style="color:var(--green);font-weight:600">${fmtMoney(d.price)}</td><td>${d.responsible}</td><td><span class="badge badge-accent">${d.source}</span></td><td>${d.pipeline}</td><td>${fmtDate(d.created_at)}</td><td>${fmtDate(d.closed_at)}</td><td><a href="https://${currentSubdomain}.kommo.com/leads/detail/${d.id}" target="_blank" style="font-size:12px">Abrir ↗</a></td></tr>`).join('');
 }
 
-// ─── Utils ───────────────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 
 // ═══════════════════════════════════════════════════════
-//  TEAM SUB-TABS & SLA
+//  EQUIPE — SLA / TEMPO DE RESPOSTA
 // ═══════════════════════════════════════════════════════
-
-function showTeamSub(sub){
-  document.querySelectorAll('.team-sub').forEach(b=>b.classList.toggle('active',b.dataset.sub===sub));
-  document.querySelectorAll('.team-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById(sub==='ranking'?'teamRanking':'teamSLA').classList.add('active');
-  // Auto-load SLA data when switching to SLA tab
-  if(sub==='sla' && !slaData && currentSubdomain) loadSLAData();
-}
 
 // ─── Business Hours Modal ────────────────────────────
 
@@ -924,44 +890,77 @@ function fmtMinutes(m){
 function renderSLA(data){
   const g=data.global;
   const target=data.sla_target_minutes;
+  const CRITICAL_MINUTES = 72 * 60; // 72 hours in minutes
 
-  // KPI cards
+  // Count pending per user
+  const pendingByUser={};
+  const criticalByUser={};
+  data.pending_leads.forEach(p=>{
+    pendingByUser[p.responsible_name]=(pendingByUser[p.responsible_name]||0)+1;
+    if(p.waiting_total_minutes >= CRITICAL_MINUTES){
+      criticalByUser[p.responsible_name]=(criticalByUser[p.responsible_name]||0)+1;
+    }
+  });
+
+  const criticalLeads = data.pending_leads.filter(p => p.waiting_total_minutes >= CRITICAL_MINUTES);
+
+  // ─── Global KPIs ───────────────────────────────────
   document.getElementById('slaKpis').innerHTML=`
     <div class="card"><div class="card-label">Tempo Médio Resposta</div><div class="card-value ${g.avg_response_minutes<=target?'green':g.avg_response_minutes<=target*2?'orange':'red'}">${fmtMinutes(g.avg_response_minutes)}</div><div class="card-sub">Meta: ≤${fmtMinutes(target)}</div></div>
     <div class="card"><div class="card-label">Msgs Pareadas</div><div class="card-value accent">${fmt(g.total_messages)}</div><div class="card-sub">incoming → outgoing</div></div>
     <div class="card"><div class="card-label">% Dentro do SLA</div><div class="card-value ${g.sla_rate>=80?'green':g.sla_rate>=60?'orange':'red'}">${g.sla_rate}%</div><div class="card-sub">≤${fmtMinutes(target)} = OK</div></div>
-    <div class="card"><div class="card-label">P90</div><div class="card-value ${g.p90_minutes<=target?'green':g.p90_minutes<=target*3?'orange':'red'}">${fmtMinutes(g.p90_minutes)}</div><div class="card-sub">90% respondem em até</div></div>
-    <div class="card"><div class="card-label">Aguardando Resposta</div><div class="card-value ${g.over_sla_count>0?'red':'green'}">${g.pending_count}</div><div class="card-sub">${g.over_sla_count} fora do SLA</div></div>
-    <div class="card"><div class="card-sub" style="margin-top:0"><button class="btn btn-sm" onclick="slaData=null;loadSLAData()" style="width:100%">🔄 Recarregar</button></div></div>
+    <div class="card"><div class="card-label">P90</div><div class="card-value ${g.p90_minutes<=target*2?'green':g.p90_minutes<=target*4?'orange':'red'}">${fmtMinutes(g.p90_minutes)}</div><div class="card-sub">90% respondem em até</div></div>
+    <div class="card"><div class="card-label">Aguardando</div><div class="card-value ${g.over_sla_count>0?'red':'green'}">${g.pending_count}</div><div class="card-sub">${g.over_sla_count} fora do SLA</div></div>
+    <div class="card"><div class="card-label">Críticos (+72h)</div><div class="card-value ${criticalLeads.length>0?'red':'green'}">${criticalLeads.length}</div><div class="card-sub">Sem resposta há 3+ dias</div></div>
   `;
 
-  // User table
-  const ut=document.getElementById('slaUserTable');
+  // ─── Per-user Cards ────────────────────────────────
+  const uc=document.getElementById('slaUserCards');
   if(data.users.length>0){
-    document.getElementById('slaUserSection').style.display='';
-    ut.innerHTML=data.users.map(u=>{
-      const cls=u.sla_rate>=80?'sla-ok':u.sla_rate>=60?'sla-warn':'sla-bad';
-      return `<tr>
-        <td style="font-weight:600;color:var(--text-bright)">${u.name}</td>
-        <td>${u.leads_count}</td>
-        <td>${u.total_messages}</td>
-        <td style="font-weight:600;color:${u.avg_response_minutes<=target?'var(--green)':u.avg_response_minutes<=target*2?'var(--orange)':'var(--red)'}">${fmtMinutes(u.avg_response_minutes)}</td>
-        <td>${fmtMinutes(u.median_response_minutes)}</td>
-        <td style="color:${u.p90_response_minutes<=target*2?'var(--text-bright)':'var(--orange)'}">${fmtMinutes(u.p90_response_minutes)}</td>
-        <td><span class="badge badge-green">${u.within_sla}</span></td>
-        <td><span class="badge badge-red">${u.outside_sla}</span></td>
-        <td class="${cls}" style="font-weight:700">${u.sla_rate}%</td>
-      </tr>`;
-    }).join('');
+    uc.innerHTML='<div class="sla-users-grid">'+data.users.map(u=>{
+      const badgeCls=u.sla_rate>=80?'good':u.sla_rate>=60?'warn':'bad';
+      const barColor=u.sla_rate>=80?'var(--green)':u.sla_rate>=60?'var(--orange)':'var(--red)';
+      const avgColor=u.avg_response_minutes<=target?'var(--green)':u.avg_response_minutes<=target*2?'var(--orange)':'var(--red)';
+      const pending=pendingByUser[u.name]||0;
+      const critical=criticalByUser[u.name]||0;
+      return `<div class="sla-user-card">
+        <div class="sla-user-header">
+          <div class="sla-user-name">${u.name}</div>
+          <div class="sla-user-badge ${badgeCls}">${u.sla_rate}% SLA</div>
+        </div>
+        <div class="sla-user-stats">
+          <div class="sla-stat"><div class="sla-stat-value" style="color:${avgColor}">${fmtMinutes(u.avg_response_minutes)}</div><div class="sla-stat-label">Tempo Médio</div></div>
+          <div class="sla-stat"><div class="sla-stat-value" style="color:var(--text-bright)">${fmtMinutes(u.median_response_minutes)}</div><div class="sla-stat-label">Mediana</div></div>
+          <div class="sla-stat"><div class="sla-stat-value" style="color:var(--text-bright)">${fmtMinutes(u.p90_response_minutes)}</div><div class="sla-stat-label">P90</div></div>
+        </div>
+        <div class="sla-user-bar"><div class="sla-user-bar-fill" style="width:${Math.min(u.sla_rate,100)}%;background:${barColor}"></div></div>
+        <div class="sla-user-stats" style="margin-top:10px">
+          <div class="sla-stat"><div class="sla-stat-value" style="font-size:14px;color:var(--accent)">${u.leads_count}</div><div class="sla-stat-label">Leads</div></div>
+          <div class="sla-stat"><div class="sla-stat-value" style="font-size:14px;color:var(--green)">${u.within_sla}</div><div class="sla-stat-label">Dentro SLA</div></div>
+          <div class="sla-stat"><div class="sla-stat-value" style="font-size:14px;color:var(--red)">${u.outside_sla}</div><div class="sla-stat-label">Fora SLA</div></div>
+        </div>
+        ${pending>0?`<div class="sla-user-pending">⏳ ${pending} aguardando${critical>0?` · <span class="critical">🚨 ${critical} crítico${critical>1?'s':''}</span>`:''}</div>`:''}
+      </div>`;
+    }).join('')+'</div>';
   }else{
-    document.getElementById('slaUserSection').style.display='none';
+    uc.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:40px">Nenhum dado de mensagens encontrado no período. Verifique se há eventos de chat nos leads filtrados.</p>';
   }
 
-  // Pending leads
-  const pt=document.getElementById('slaPendingTable');
-  if(data.pending_leads.length>0){
+  // ─── Charts ────────────────────────────────────────
+  if(data.users.length>0){
+    document.getElementById('slaChartsRow').style.display='';
+    renderSlaBarChart(data.users, target);
+    renderSlaRateChart(data.users);
+  }else{
+    document.getElementById('slaChartsRow').style.display='none';
+  }
+
+  // ─── Pending Leads ─────────────────────────────────
+  const nonCritical=data.pending_leads.filter(p=>p.waiting_total_minutes<CRITICAL_MINUTES);
+  if(nonCritical.length>0){
     document.getElementById('slaPendingSection').style.display='';
-    pt.innerHTML=data.pending_leads.map(p=>{
+    document.getElementById('slaPendingCount').textContent=`${nonCritical.length} leads`;
+    document.getElementById('slaPendingTable').innerHTML=nonCritical.map(p=>{
       const cls=p.over_sla?'sla-bad':'sla-ok';
       return `<tr>
         <td style="font-weight:500;color:var(--text-bright)">${p.lead_name}</td>
@@ -977,13 +976,20 @@ function renderSLA(data){
     document.getElementById('slaPendingSection').style.display='none';
   }
 
-  // Charts
-  if(data.users.length>0){
-    document.getElementById('slaChartsRow').style.display='';
-    renderSlaBarChart(data.users, target);
-    renderSlaRateChart(data.users);
+  // ─── Critical Leads (72h+) ─────────────────────────
+  if(criticalLeads.length>0){
+    document.getElementById('slaCriticalSection').style.display='';
+    document.getElementById('slaCriticalCount').textContent=`${criticalLeads.length} leads`;
+    document.getElementById('slaCriticalTable').innerHTML=criticalLeads.map(p=>`<tr style="background:rgba(232,112,106,.04)">
+      <td style="font-weight:600;color:var(--red)">${p.lead_name}</td>
+      <td>${p.responsible_name}</td>
+      <td>${fmtDate(p.incoming_at)}</td>
+      <td style="font-weight:700;color:var(--red)">${fmtMinutes(p.waiting_minutes)}</td>
+      <td style="color:var(--red)">${fmtMinutes(p.waiting_total_minutes)}</td>
+      <td><a href="https://${currentSubdomain}.kommo.com/leads/detail/${p.lead_id}" target="_blank" style="font-size:12px;color:var(--red)">Abrir ↗</a></td>
+    </tr>`).join('');
   }else{
-    document.getElementById('slaChartsRow').style.display='none';
+    document.getElementById('slaCriticalSection').style.display='none';
   }
 }
 
