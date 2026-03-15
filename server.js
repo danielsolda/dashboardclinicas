@@ -162,6 +162,20 @@ app.get('/api/sla', async (req, res) => {
   }
 });
 
+// ─── Debug: Inspect lead events for SLA diagnosis ────
+
+app.get('/api/debug/lead-events', async (req, res) => {
+  try {
+    const { subdomain, lead_id } = req.query;
+    if (!subdomain || !lead_id) return res.status(400).json({ error: 'subdomain and lead_id required' });
+    const data = await kommo.debugLeadEvents(subdomain, Number(lead_id));
+    res.json(data);
+  } catch (err) {
+    console.error('Debug error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Start ───────────────────────────────────────────
 
 const fs = require('fs');
