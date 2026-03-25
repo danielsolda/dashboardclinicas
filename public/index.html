@@ -663,7 +663,17 @@ async function onAccountChange(subdomain){
     document.getElementById('emptyState').style.display='none';
     document.getElementById('dashboardContent').style.display='';
     await loadDashboard();
-  }catch(e){showLoading(false);alert('Erro: '+e.message)}
+  }catch(e){
+    showLoading(false);
+    const msg = e.message || '';
+    if(msg.includes('Falha ao renovar token') || msg.includes('401') || msg.includes('403') || msg.includes('Reconecte')) {
+      if(confirm('Token expirado. Deseja reconectar a conta "'+subdomain+'" agora?')) {
+        window.open('/auth/connect?subdomain='+encodeURIComponent(subdomain),'_blank','width=600,height=700');
+      }
+    } else {
+      alert('Erro: '+msg);
+    }
+  }
 }
 
 // ═══ FLATPICKR ═══════════════════════════════════════
@@ -693,7 +703,14 @@ async function loadDashboard(){
     if(data.error) throw new Error(data.error);
     dashboardData=data;
     renderDashboard(data);
-  }catch(e){alert('Erro: '+e.message)}finally{showLoading(false)}
+  }catch(e){
+    const msg=e.message||'';
+    if(msg.includes('renovar token')||msg.includes('401')||msg.includes('403')||msg.includes('Reconecte')){
+      if(confirm('Token expirado. Deseja reconectar a conta "'+currentSubdomain+'" agora?')){
+        window.open('/auth/connect?subdomain='+encodeURIComponent(currentSubdomain),'_blank','width=600,height=700');
+      }
+    }else{alert('Erro: '+msg)}
+  }finally{showLoading(false)}
 }
 
 function formatISO(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -876,7 +893,14 @@ async function loadSLAData(){
     if(data.error) throw new Error(data.error);
     slaData=data;
     renderSLA(data);
-  }catch(e){alert('Erro SLA: '+e.message)}finally{showLoading(false)}
+  }catch(e){
+    const msg=e.message||'';
+    if(msg.includes('renovar token')||msg.includes('401')||msg.includes('403')||msg.includes('Reconecte')){
+      if(confirm('Token expirado. Deseja reconectar a conta "'+currentSubdomain+'" agora?')){
+        window.open('/auth/connect?subdomain='+encodeURIComponent(currentSubdomain),'_blank','width=600,height=700');
+      }
+    }else{alert('Erro SLA: '+msg)}
+  }finally{showLoading(false)}
 }
 
 function fmtMinutes(m){
