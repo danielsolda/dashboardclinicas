@@ -64,6 +64,21 @@ app.post('/auth/token', (req, res) => {
   res.json({ ok: true, subdomain });
 });
 
+app.post('/auth/refresh', async (req, res) => {
+  try {
+    const { subdomain } = req.body;
+    if (!subdomain) return res.status(400).json({ error: 'subdomain obrigatório' });
+    const acct = store.getAccount(subdomain);
+    if (!acct) return res.status(404).json({ error: `Conta "${subdomain}" não encontrada` });
+    if (acct.auth_mode === 'long_lived') return res.json({ ok: true, message: 'Token de longa duração não requer refresh' });
+    const token = await kommo.forceRefreshToken(subdomain);
+    res.json({ ok: true, message: `Token renovado com sucesso para ${subdomain}` });
+  } catch (err) {
+    console.error('Force refresh error:', err.message);
+    res.status(500).json({ error: err.message, needs_reconnect: true });
+  }
+});
+
 app.get('/auth/accounts', (req, res) => res.json(store.listAccounts()));
 
 app.delete('/auth/accounts/:subdomain', (req, res) => {
