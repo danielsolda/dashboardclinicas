@@ -91,7 +91,8 @@ app.get('/api/filters', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Filters error:', err.message);
-    res.status(500).json({ error: err.message });
+    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
+    res.status(status).json({ error: err.message, kommo_path: err.kommoPath });
   }
 });
 
@@ -116,7 +117,8 @@ app.get('/api/dashboard', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Dashboard error:', err.message);
-    res.status(500).json({ error: err.message });
+    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
+    res.status(status).json({ error: err.message, kommo_path: err.kommoPath });
   }
 });
 
@@ -158,7 +160,8 @@ app.get('/api/sla', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('SLA error:', err.message);
-    res.status(500).json({ error: err.message });
+    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 500;
+    res.status(status).json({ error: err.message, kommo_path: err.kommoPath });
   }
 });
 
